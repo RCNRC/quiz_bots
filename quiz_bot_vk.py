@@ -27,7 +27,7 @@ DEFAULT_KEYBOARD.add_button('Мой счёт', color=VkKeyboardColor.SECONDARY)
 
 
 def handle_new_question_request(event, vk_api):
-    question, answer = get_random_question_answer('quiz-questions')
+    question, answer = get_random_question_answer('/opt/quiz_bots/quiz-questions')
     REDIS.rpush(event.user_id, answer)
     vk_api.messages.send(
         user_id=event.user_id,

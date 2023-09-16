@@ -42,7 +42,7 @@ def start(update: Update, context: CallbackContext):
 
 
 def handle_new_question_request(update, _):
-    question, answer = get_random_question_answer('quiz-questions')
+    question, answer = get_random_question_answer('/opt/quiz_bots/quiz-questions')
     REDIS.rpush(update.effective_chat.id, answer)
     update.message.reply_text(
         text=question,
