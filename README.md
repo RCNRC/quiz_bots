@@ -23,6 +23,7 @@
 12. В файл `.env` добавить строку `REDIS_HOST=host`, где `host` - хост от базы данных Redis, полученный на шаге 11.
 13. В файл `.env` добавить строку `REDIS_PORT=port`, где `port` - порт от базы данных Redis, полученный на шаге 11.
 14. В файл `.env` добавить строку `REDIS_PASSWORD=password`, где `password` - пароль от базы данных Redis, полученный на шаге 11.
+15. В файл `.env` добавить строку `DEFAULT_QUIZ_FOLDER=/path/to/quiz/folder` - где `/path/to/quiz/folder` - путь до папки с вопросами викторины.
 
 ## Запуск
 

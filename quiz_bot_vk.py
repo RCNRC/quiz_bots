@@ -25,7 +25,7 @@ DEFAULT_KEYBOARD.add_button('Сдаться', color=VkKeyboardColor.NEGATIVE)
 DEFAULT_KEYBOARD.add_line()
 DEFAULT_KEYBOARD.add_button('Мой счёт', color=VkKeyboardColor.SECONDARY)
 
-QQC = QuizQuestionsCash('./quiz-questions')
+QQC = QuizQuestionsCash(dotenv_values()['DEFAULT_QUIZ_FOLDER'])
 
 
 def handle_new_question_request(event, vk_api):

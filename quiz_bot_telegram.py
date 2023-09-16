@@ -27,7 +27,7 @@ REDIS = redis.Redis(
     decode_responses=True
 )
 
-QQC = QuizQuestionsCash('./quiz-questions')
+QQC = QuizQuestionsCash(dotenv_values()['DEFAULT_QUIZ_FOLDER'])
 
 
 class States(Enum):
