@@ -24,6 +24,11 @@
 13. В файл `.env` добавить строку `REDIS_PORT=port`, где `port` - порт от базы данных Redis, полученный на шаге 11.
 14. В файл `.env` добавить строку `REDIS_PASSWORD=password`, где `password` - пароль от базы данных Redis, полученный на шаге 11.
 
+## Запуск
+
+Чтобы запустить бота, выполните его как python скрипт:
+1. Для Vk: `python3 quiz_bot_telegram.py`
+2. Для Telegram: `python3 quiz_bot_vk.py`
 
 ## Дополнительно
 
