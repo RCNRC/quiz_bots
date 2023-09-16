@@ -2,49 +2,35 @@ import random
 import os
 
 
-def get_qustions_answers(file_name: str) -> dict:
-    qustions_answers = dict()
-    last_added_tour = 'default'
-    last_added_question = ''
-    last_added_answer = ''
-    next_is_tour = False
-    next_is_question = False
-    next_is_answer = False
-    with open(file_name, 'r', encoding='KOI8-R') as file:
-        line = file.readline()
-        while line:
-            if next_is_tour:
-                last_added_tour = line
-                qustions_answers[line] = []
-                next_is_tour = False
-            elif next_is_question:
-                if line == '\n':
-                    next_is_question = False
-                else:
-                    last_added_question = last_added_question + line
-            elif next_is_answer:
-                if line == '\n':
-                    next_is_answer = False
-                    if last_added_tour not in qustions_answers:
-                        qustions_answers[last_added_tour] = []
-                    qustions_answers[last_added_tour].append(
-                        (last_added_question, last_added_answer)
-                    )
-                    last_added_question = ''
-                    last_added_answer = ''
-                else:
-                    last_added_answer = last_added_answer + line
-            elif line.startswith('Тур:'):
-                next_is_tour = True
-            elif line.startswith('Вопрос '):
-                next_is_question = True
-            elif line.startswith('Ответ:'):
-                next_is_answer = True
-            line = file.readline()
-    return qustions_answers
+class QuizQuestionsCash:
+    def __init__(self, default_path: str) -> None:
+        self.questions_answers = dict()
+        self.index = 0
+        self.looked_files = set()
+        self.default_path = default_path
 
+    def add_question_answer(self, question: str, answer: str):
+        self.questions_answers[self.index] = (question, answer)
+        self.index += 1
 
-def get_random_question_answer(path: str) -> tuple:
-    random_file = random.choice(os.listdir(path))
-    qustions_answers = get_qustions_answers(os.path.join(path, random_file))
-    return random.choice(random.choice(list(qustions_answers.values())))
+    def store_new_questions(self, path=None):
+        if not path:
+            path = self.default_path
+        local_files = set(os.listdir(path))
+        avialable_files = local_files.difference(self.looked_files)
+        if not avialable_files:
+            return
+        random_file = random.choice(list(avialable_files))
+
+        with open(os.path.join(path, random_file), 'r', encoding='KOI8-R') as file:
+            file_data = file.read()
+
+        file_blocks = [block.strip('\n') for block in file_data.split('\n\n')]
+        for iters, block in enumerate(file_blocks):
+            if block.startswith('Вопрос '):
+                question = '\n'.join(block.split('\n')[1:])
+                answer = '\n'.join(file_blocks[iters+1].split('\n')[1:])
+                self.add_question_answer(question, answer)
+
+    def get_random_question_anwer(self) -> tuple:
+        return self.questions_answers[random.randint(0, self.index-1)]

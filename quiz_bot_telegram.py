@@ -13,7 +13,7 @@ from telegram.ext import (
 )
 import redis
 from tools.logger import LogsHandler
-from tools.quiz import get_random_question_answer
+from tools.quiz import QuizQuestionsCash
 
 
 LOGGER = logging.getLogger('Telegram QUIZ bot logger')
@@ -26,6 +26,8 @@ REDIS = redis.Redis(
     password=dotenv_values()['REDIS_PASSWORD'],
     decode_responses=True
 )
+
+QQC = QuizQuestionsCash('./quiz-questions')
 
 
 class States(Enum):
@@ -42,7 +44,7 @@ def start(update: Update, context: CallbackContext):
 
 
 def handle_new_question_request(update, _):
-    question, answer = get_random_question_answer('quiz-questions')
+    question, answer = QQC.get_random_question_anwer()
     REDIS.rpush(update.effective_chat.id, answer)
     update.message.reply_text(
         text=question,
@@ -64,7 +66,8 @@ def handle_solution_attempt(update, _):
     if answer == update.message.text:
         REDIS.delete(update.effective_chat.id)
         update.message.reply_text(
-            text='Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
+            text='Правильно! Поздравляю!' +
+                 ' Для следующего вопроса нажми «Новый вопрос»',
             reply_markup=DEFAULT_MARKUP,
         )
         return ConversationHandler.END
@@ -125,6 +128,8 @@ def main():
     handler.setFormatter(logger_format)
 
     LOGGER.addHandler(handler)
+
+    QQC.store_new_questions()
 
     bot_telegramm_api_token = dotenv_values()['TELEGRAM_BOT_API_TOKEN']
     bot = telegram.Bot(token=bot_telegramm_api_token)

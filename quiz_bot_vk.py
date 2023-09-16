@@ -8,7 +8,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 from tools.logger import LogsHandler
-from tools.quiz import get_random_question_answer
+from tools.quiz import QuizQuestionsCash
 
 
 LOGGER = logging.getLogger('Vk QUIZ bot logger')
@@ -25,9 +25,11 @@ DEFAULT_KEYBOARD.add_button('Сдаться', color=VkKeyboardColor.NEGATIVE)
 DEFAULT_KEYBOARD.add_line()
 DEFAULT_KEYBOARD.add_button('Мой счёт', color=VkKeyboardColor.SECONDARY)
 
+QQC = QuizQuestionsCash('./quiz-questions')
+
 
 def handle_new_question_request(event, vk_api):
-    question, answer = get_random_question_answer('quiz-questions')
+    question, answer = QQC.get_random_question_anwer()
     REDIS.rpush(event.user_id, answer)
     vk_api.messages.send(
         user_id=event.user_id,
@@ -51,7 +53,8 @@ def handle_solution_attempt(event, vk_api):
         REDIS.delete(event.user_id)
         vk_api.messages.send(
             user_id=event.user_id,
-            message='Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
+            message='Правильно! Поздравляю! ' +
+                    'Для следующего вопроса нажми «Новый вопрос»',
             random_id=random.randint(1, 1000),
             keyboard=DEFAULT_KEYBOARD.get_keyboard(),
         )
@@ -106,6 +109,8 @@ def main():
     handler.setFormatter(logger_format)
 
     LOGGER.addHandler(handler)
+
+    QQC.store_new_questions()
 
     while True:
         try:
