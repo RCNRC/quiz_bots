@@ -33,7 +33,7 @@ def handle_new_question_request(event, vk_api):
     REDIS.rpush(event.user_id, answer)
     vk_api.messages.send(
         user_id=event.user_id,
-        message=question,  # event.text
+        message=question,
         random_id=random.randint(1, 1000),
         keyboard=DEFAULT_KEYBOARD.get_keyboard(),
     )
@@ -41,15 +41,16 @@ def handle_new_question_request(event, vk_api):
 
 def handle_solution_attempt(event, vk_api):
     users_data_length = REDIS.llen(event.user_id)
-    original_answer = REDIS.lrange(event.user_id, 0, 0)[0]
-    answer = original_answer
-    if ' (' in answer and ')' in answer:
-        answer = answer.split(' (')[0] + answer.split(' (')[1].split(')')[1]
-    if '.' in answer:
-        answer = answer.split('.')[0]
+    full_answer = REDIS.lrange(event.user_id, 0, 0)[0]
+    target_answer = full_answer
+    if ' (' in target_answer and ')' in target_answer:
+        target_answer = target_answer.split(' (')[0]\
+            + target_answer.split(' (')[1].split(')')[1]
+    if '.' in target_answer:
+        target_answer = target_answer.split('.')[0]
     else:
-        answer = answer.split('\n')[0]
-    if answer == event.text:
+        target_answer = target_answer.split('\n')[0]
+    if target_answer == event.text:
         REDIS.delete(event.user_id)
         vk_api.messages.send(
             user_id=event.user_id,
@@ -70,7 +71,7 @@ def handle_solution_attempt(event, vk_api):
         REDIS.delete(event.user_id)
         vk_api.messages.send(
             user_id=event.user_id,
-            message=f'Неправильно, правильный ответ:\n{original_answer}',
+            message=f'Неправильно, правильный ответ:\n{full_answer}',
             random_id=random.randint(1, 1000),
             keyboard=DEFAULT_KEYBOARD.get_keyboard(),
         )

@@ -55,15 +55,16 @@ def handle_new_question_request(update, _):
 
 def handle_solution_attempt(update, _):
     users_data_length = REDIS.llen(update.effective_chat.id)
-    original_answer = REDIS.lrange(update.effective_chat.id, 0, 0)[0]
-    answer = original_answer
-    if ' (' in answer and ')' in answer:
-        answer = answer.split(' (')[0] + answer.split(' (')[1].split(')')[1]
-    if '.' in answer:
-        answer = answer.split('.')[0]
+    full_answer = REDIS.lrange(update.effective_chat.id, 0, 0)[0]
+    target_answer = full_answer
+    if ' (' in target_answer and ')' in target_answer:
+        target_answer = target_answer.split(' (')[0]\
+            + target_answer.split(' (')[1].split(')')[1]
+    if '.' in target_answer:
+        target_answer = target_answer.split('.')[0]
     else:
-        answer = answer.split('\n')[0]
-    if answer == update.message.text:
+        target_answer = target_answer.split('\n')[0]
+    if target_answer == update.message.text:
         REDIS.delete(update.effective_chat.id)
         update.message.reply_text(
             text='Правильно! Поздравляю!' +
@@ -81,7 +82,7 @@ def handle_solution_attempt(update, _):
     elif users_data_length >= 2:
         REDIS.delete(update.effective_chat.id)
         update.message.reply_text(
-            text=f'Неправильно, правильный ответ:\n{original_answer}',
+            text=f'Неправильно, правильный ответ:\n{full_answer}',
             reply_markup=DEFAULT_MARKUP,
         )
         return ConversationHandler.END
