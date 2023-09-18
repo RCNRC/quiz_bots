@@ -11,7 +11,7 @@ from telegram.ext import (
     Filters,
     ConversationHandler,
 )
-import redis
+from redis import Redis
 from tools.logger import LogsHandler
 from tools.quiz import QuizQuestionsCash
 
@@ -20,14 +20,6 @@ LOGGER = logging.getLogger('Telegram QUIZ bot logger')
 DEFAULT_KEYBOARD = [['Новый вопрос', 'Сдаться'],
                     ['Мой счёт']]
 DEFAULT_MARKUP = telegram.ReplyKeyboardMarkup(DEFAULT_KEYBOARD)
-REDIS = redis.Redis(
-    host=dotenv_values()['REDIS_HOST'],
-    port=dotenv_values()['REDIS_PORT'],
-    password=dotenv_values()['REDIS_PASSWORD'],
-    decode_responses=True
-)
-
-QQC = QuizQuestionsCash(dotenv_values()['DEFAULT_QUIZ_FOLDER'])
 
 
 class States(Enum):
@@ -43,9 +35,11 @@ def start(update: Update, context: CallbackContext):
     )
 
 
-def handle_new_question_request(update, _):
-    question, answer = QQC.get_random_question_anwer()
-    REDIS.rpush(update.effective_chat.id, answer)
+def handle_new_question_request(update, context):
+    redis = context.bot_data["redis"]
+    qqc = context.bot_data["qqc"]
+    question, answer = qqc.get_random_question_anwer()
+    redis.rpush(update.effective_chat.id, answer)
     update.message.reply_text(
         text=question,
         reply_markup=DEFAULT_MARKUP,
@@ -53,9 +47,10 @@ def handle_new_question_request(update, _):
     return States.ANSWER
 
 
-def handle_solution_attempt(update, _):
-    users_data_length = REDIS.llen(update.effective_chat.id)
-    full_answer = REDIS.lrange(update.effective_chat.id, 0, 0)[0]
+def handle_solution_attempt(update, context):
+    redis = context.bot_data["redis"]
+    users_data_length = redis.llen(update.effective_chat.id)
+    full_answer = redis.lrange(update.effective_chat.id, 0, 0)[0]
     target_answer = full_answer
     if ' (' in target_answer and ')' in target_answer:
         target_answer = target_answer.split(' (')[0]\
@@ -65,7 +60,7 @@ def handle_solution_attempt(update, _):
     else:
         target_answer = target_answer.split('\n')[0]
     if target_answer == update.message.text:
-        REDIS.delete(update.effective_chat.id)
+        redis.delete(update.effective_chat.id)
         update.message.reply_text(
             text='Правильно! Поздравляю!' +
                  ' Для следующего вопроса нажми «Новый вопрос»',
@@ -73,14 +68,14 @@ def handle_solution_attempt(update, _):
         )
         return ConversationHandler.END
     elif users_data_length == 1:
-        REDIS.rpush(update.effective_chat.id, 1)
+        redis.rpush(update.effective_chat.id, 1)
         update.message.reply_text(
             text='Неправильно… Попробуешь ещё раз?',
             reply_markup=DEFAULT_MARKUP,
         )
         return States.ANSWER
     elif users_data_length >= 2:
-        REDIS.delete(update.effective_chat.id)
+        redis.delete(update.effective_chat.id)
         update.message.reply_text(
             text=f'Неправильно, правильный ответ:\n{full_answer}',
             reply_markup=DEFAULT_MARKUP,
@@ -88,18 +83,19 @@ def handle_solution_attempt(update, _):
         return ConversationHandler.END
 
 
-def cancel_question(update, _):
-    if REDIS.exists(update.effective_chat.id):
-        answer = REDIS.lrange(update.effective_chat.id, 0, 0)[0]
+def cancel_question(update, context):
+    redis = context.bot_data["redis"]
+    if redis.exists(update.effective_chat.id):
+        answer = redis.lrange(update.effective_chat.id, 0, 0)[0]
         text = f'Правильный ответ:\n{answer}'
-        REDIS.delete(update.effective_chat.id)
+        redis.delete(update.effective_chat.id)
     else:
         text = 'Нечего отменять'
     update.message.reply_text(
         text=text,
         reply_markup=DEFAULT_MARKUP,
     )
-    return handle_new_question_request(update, _)
+    return handle_new_question_request(update, context)
 
 
 def error_handler(_, context):
@@ -113,6 +109,13 @@ def error_handler(_, context):
 
 
 def main():
+    redis = Redis(
+        host=dotenv_values()['REDIS_HOST'],
+        port=dotenv_values()['REDIS_PORT'],
+        password=dotenv_values()['REDIS_PASSWORD'],
+        decode_responses=True
+    )
+
     LOGGER.setLevel(logging.DEBUG)
 
     chat_id = dotenv_values()['TELEGRAM_CHAT_ID']
@@ -130,12 +133,17 @@ def main():
 
     LOGGER.addHandler(handler)
 
-    QQC.store_new_questions()
+    qqc = QuizQuestionsCash(dotenv_values()['DEFAULT_QUIZ_FOLDER'])
+    qqc.store_new_questions()
 
     bot_telegramm_api_token = dotenv_values()['TELEGRAM_BOT_API_TOKEN']
     bot = telegram.Bot(token=bot_telegramm_api_token)
     updater = Updater(bot=bot)
     dispatcher = updater.dispatcher
+    dispatcher.bot_data = {
+        'redis': redis,
+        'qqc': qqc,
+    }
 
     conv_handler = ConversationHandler(
         entry_points=[
